@@ -14,12 +14,13 @@ namespace AMDev.CamServer.UWP.Network
         #region Consts      
 
         protected const byte VersionBytes = 0x01;
-        protected const int CamFrameSize = 22;
+        protected const int CamHeaderSize = 22;
 
         #endregion
 
         #region Fields
 
+        private long length = 0;
         private byte version = VersionBytes;
         private byte payloadType = (byte)KnownDataPayloadTypes.NotSet;
         private uint sequenceCounter = 0;
@@ -29,6 +30,14 @@ namespace AMDev.CamServer.UWP.Network
         #endregion
 
         #region Properties
+
+        public long Length
+        {
+            get
+            {
+                return CamHeaderSize + this.PayloadLength;
+            }
+        }
 
         public byte Version
         {
@@ -130,7 +139,7 @@ namespace AMDev.CamServer.UWP.Network
             if (buffer == null)
                 throw new ArgumentNullException(nameof(buffer));
 
-            if (buffer.Length < CamFrameSize)
+            if (buffer.Length < CamHeaderSize)
                 throw new FormatException("Frame size too small");
 
             ms = new MemoryStream(buffer);
@@ -153,6 +162,7 @@ namespace AMDev.CamServer.UWP.Network
             BinaryWriter binaryWriter = new BinaryWriter(ms);
             byte[] result = null;
 
+            binaryWriter.Write(this.Length);
             binaryWriter.Write(this.Version);
             binaryWriter.Write(this.PayloadType);
             binaryWriter.Write(this.SequenceCounter);

@@ -1,6 +1,7 @@
 ﻿using AMDev.CamServer.UWP.Threading;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -147,28 +148,54 @@ namespace AMDev.CamServer.UWP.Network
 
         public int Send(byte[] buffer)
         {
-            TcpClient[] clients = null;
+            List<String> disposedClients = new List<string>();
+            String[] clientsKeys = null;
             int result = 0;
 
             if (this.Listening)
             {
                 if (this.clientDictionary.Count > 0)
                 {
-                    clients = this.clientDictionary.Values.ToArray();
-                    for (int i = 0; i < clients.Length; i++)
+                    clientsKeys = this.clientDictionary.Keys.ToArray();                    
+                    for (int i = 0; i < clientsKeys.Length; i++)
                     {
-                        NetworkStream ns = null;
-                        try
-                        {
-                            ns = clients[i].GetStream();
-                            ns.Write(buffer, 0, buffer.Length);
-                            result += buffer.Length;
-                        }
-                        catch (Exception)
-                        {
+                        TcpClient currentClient = null;
 
+                        if (this.clientDictionary.ContainsKey(clientsKeys[i]))
+                        {
+                            currentClient = this.clientDictionary[clientsKeys[i]];
+                            if (currentClient != null)
+                            {
+                                NetworkStream ns = null;
+                                try
+                                {
+                                    ns = currentClient.GetStream();
+                                    ns.Write(buffer, 0, buffer.Length);
+                                    result += buffer.Length;
+                                }
+                                catch (InvalidOperationException)
+                                {
+                                    disposedClients.Add(clientsKeys[i]);
+                                }
+                                catch (SocketException)
+                                {
+                                    disposedClients.Add(clientsKeys[i]);
+                                }
+                                catch (Exception)
+                                {
+                                    disposedClients.Add(clientsKeys[i]);
+                                }
+                            }
                         }
                     }
+                }
+
+                if (disposedClients.Count > 0)
+                {
+                    for (int i = 0; i < disposedClients.Count; i++)
+                        this.CloseClient(disposedClients[i]);
+                    disposedClients.Clear();
+                    disposedClients = null;
                 }
             }
             return result;
@@ -209,6 +236,30 @@ namespace AMDev.CamServer.UWP.Network
                     }
                 }
             }
+        }
+
+        private bool CloseClient(String endpointAddress)
+        {
+            TcpClient client = null;
+            bool result = false;
+            try
+            {
+                if (this.clientDictionary.ContainsKey(endpointAddress))
+                {
+                    client = this.clientDictionary[endpointAddress];
+                    client.Dispose();
+                    this.clientDictionary.Remove(endpointAddress);
+                    client = null;
+                }
+                result = true;
+            }
+            catch(Exception exc)
+            {
+                if (Debugger.IsAttached)                
+                    Debug.WriteLine(exc.ToString());                
+            }
+
+            return result;
         }
     }
 }
