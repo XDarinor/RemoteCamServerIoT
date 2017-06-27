@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AMDev.CamServer.Client.Network
@@ -20,6 +22,7 @@ namespace AMDev.CamServer.Client.Network
 
         private INetworkClient networkClient = null;
         private MemoryStream bufferStream = null;
+        private Mutex bufferMutex = new Mutex();
 
         #endregion
 
@@ -63,6 +66,22 @@ namespace AMDev.CamServer.Client.Network
             this.bufferStream = new MemoryStream();
         }
 
+        ~CamStreamingClient()
+        {
+            if (this.bufferMutex != null)
+            {
+                try
+                {
+                    this.bufferMutex.Dispose();
+                    this.bufferMutex = null;
+                }
+                catch (Exception)
+                {
+
+                }
+            }
+        }
+
         #endregion
 
         #region Methods
@@ -98,6 +117,18 @@ namespace AMDev.CamServer.Client.Network
             }
         }
 
+        private void AddDataToBuffer(byte[] buffer)
+        {
+            if (buffer != null)
+            {
+                if (this.bufferMutex.WaitOne())
+                {
+                    this.bufferStream.Seek(0, SeekOrigin.End);
+                    this.bufferStream.Write(buffer, 0, buffer.Length);
+                }
+            }
+        }
+
         private CamDataFrame GetFrame()
         {
             int tagLen = CamDataFrame.FrameTegLength;
@@ -111,30 +142,35 @@ namespace AMDev.CamServer.Client.Network
             BinaryReader br = null;
             CamDataFrame dataFrame = null;
 
-            if (this.bufferStream.Length > 0)
+            if (this.bufferMutex.WaitOne(200))
             {
-                this.bufferStream.Seek(0, SeekOrigin.Begin);
-                currentPosition = this.bufferStream.Position;
-                br = new BinaryReader(this.bufferStream);
-                while (currentPosition < this.bufferStream.Length)
+                if (this.bufferStream.Length > 0)
                 {
-                    tagBuffer = new byte[tagLen];
-                    this.bufferStream.Read(tagBuffer, 0, tagLen);
-                    tag = Encoding.ASCII.GetString(tagBuffer);
-                    if (tag == CamDataFrame.FrameTag)
-                    {
-                        frameLen = br.ReadInt32();
-                        this.bufferStream.Seek(currentPosition, SeekOrigin.Begin);
-                        frameBuffer =  br.ReadBytes(frameLen);
-                        cutPosition = this.bufferStream.Position;
-                        dataFrame = CamDataFrame.FromByteArray(frameBuffer);
-                        buffer = this.bufferStream.GetBuffer();
-                        this.bufferStream.Seek(0, SeekOrigin.Begin);
-                        this.bufferStream.Write(buffer, (int) cutPosition, (buffer.Length - (int)cutPosition));
-                        break;
-                    }
+                    this.bufferStream.Seek(0, SeekOrigin.Begin);
                     currentPosition = this.bufferStream.Position;
-                }                
+                    br = new BinaryReader(this.bufferStream);
+                    while (currentPosition < this.bufferStream.Length)
+                    {
+                        tagBuffer = new byte[tagLen];
+                        this.bufferStream.Read(tagBuffer, 0, tagLen);
+                        tag = Encoding.ASCII.GetString(tagBuffer);
+                        if (tag == CamDataFrame.FrameTag)
+                        {
+                            frameLen = br.ReadInt32();
+                            if ((this.bufferStream.Length - currentPosition) < frameLen)
+                                break;
+                            this.bufferStream.Seek(currentPosition, SeekOrigin.Begin);
+                            frameBuffer = br.ReadBytes(frameLen);
+                            cutPosition = this.bufferStream.Position;
+                            dataFrame = CamDataFrame.FromByteArray(frameBuffer);
+                            buffer = this.bufferStream.GetBuffer();
+                            this.bufferStream.Seek(0, SeekOrigin.Begin);
+                            this.bufferStream.Write(buffer, (int)cutPosition, (buffer.Length - (int)cutPosition));
+                            break;
+                        }
+                        currentPosition = this.bufferStream.Position;
+                    }
+                }
             }
 
             return dataFrame;
@@ -151,9 +187,7 @@ namespace AMDev.CamServer.Client.Network
 
             if (e.Buffer != null)
             {
-                this.bufferStream.Seek(0, SeekOrigin.End);
-                this.bufferStream.Write(e.Buffer, 0, e.Buffer.Length);
-
+                this.AddDataToBuffer(e.Buffer);                
                 try
                 {
                     camDataFrame = this.GetFrame();

@@ -137,10 +137,7 @@ namespace AMDev.CamServer.Client.Network
                             if (this.DataReceived != null)
                             {
                                 eventArgs = new DataReceivedEventArgs(buffer);
-                                Task.Run(() =>
-                                {
-                                    this.DataReceived.Invoke(this, eventArgs);
-                                });                                
+                                this.DataReceived.Invoke(this, eventArgs);
                             }
                         }
                     }

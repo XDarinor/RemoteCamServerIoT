@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -21,7 +22,6 @@ namespace AMDev.CamServer.Client.Network
 
         #region Fields
 
-        private long length = 0;
         private byte version = VersionBytes;
         private byte payloadType = (byte)KnownDataPayloadTypes.NotSet;
         private uint sequenceCounter = 0;
@@ -49,6 +49,12 @@ namespace AMDev.CamServer.Client.Network
         {
             get
             {
+                int length = sizeof(byte) * 2;
+
+                length += FrameTegLength;
+                length += sizeof(uint);
+                length += sizeof(double);
+                length += sizeof(int);
                 return CamHeaderSize + this.PayloadLength;
             }
         }
@@ -175,6 +181,7 @@ namespace AMDev.CamServer.Client.Network
             byte[] tagBytes = null;
             int frameLen = 0;
             int payloadLen = 0;
+            String tag = null;
 
             if (buffer == null)
                 throw new ArgumentNullException(nameof(buffer));
@@ -184,18 +191,26 @@ namespace AMDev.CamServer.Client.Network
 
             ms = new MemoryStream(buffer);
             br = new BinaryReader(ms);
-
-            currentDataFrame = new CamDataFrame();
+            
             tagBytes = Encoding.ASCII.GetBytes(FrameTag);
             tagBytes = br.ReadBytes(tagBytes.Length);
-            frameLen = br.ReadInt32();
-            currentDataFrame.Version = br.ReadByte();
-            currentDataFrame.PayloadType = br.ReadByte();
-            currentDataFrame.SequenceCounter = br.ReadUInt32();
-            currentDataFrame.Timestamp = br.ReadDouble();
-            payloadLen = br.ReadInt32();
-            if (payloadLen > 0)
-                currentDataFrame.Payload = br.ReadBytes(payloadLen);
+            tag = Encoding.ASCII.GetString(tagBytes);
+            if (tag == FrameTag)
+            {
+                frameLen = br.ReadInt32();
+                if (frameLen == buffer.Length)
+                {
+                    currentDataFrame = new CamDataFrame();
+
+                    currentDataFrame.Version = br.ReadByte();
+                    currentDataFrame.PayloadType = br.ReadByte();
+                    currentDataFrame.SequenceCounter = br.ReadUInt32();
+                    currentDataFrame.Timestamp = br.ReadDouble(); // Must be swapped
+                    payloadLen = br.ReadInt32();
+                    if (payloadLen > 0)
+                        currentDataFrame.Payload = br.ReadBytes(payloadLen);
+                }
+            }
             return currentDataFrame;
         }
 

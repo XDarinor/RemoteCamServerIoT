@@ -2,6 +2,7 @@
 using Camserver.Client.TestApplication.Common;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -120,7 +121,7 @@ namespace Camserver.Client.TestApplication.ViewModels
         {
             this.CurrentVideoFrame = new BitmapImage();
             this.frameMemoryStream = new MemoryStream();
-        }
+        }        
 
         #endregion
 
@@ -164,14 +165,46 @@ namespace Camserver.Client.TestApplication.ViewModels
         }
 
         private void SetCurrentImageStream(CamDataFrame frame)
-        {            
+        {
+            BitmapImage bi = null;
             if (frame != null  && frame.Payload != null && this.CurrentVideoFrame != null)
             {
-                this.frameMemoryStream.SetLength(0);
-                this.frameMemoryStream.Write(frame.Payload, 0, frame.Payload.Length);
-                this.CurrentVideoFrame.BeginInit();
-                this.currentVideoFrame.StreamSource = this.frameMemoryStream;
-                this.currentVideoFrame.EndInit();
+                if (this.frameMemoryStream != null)
+                {   
+                    this.frameMemoryStream.SetLength(0);
+                    this.frameMemoryStream.Write(frame.Payload, 0, frame.Payload.Length);
+                    //this.currentVideoFrame.BeginInit();
+                    //this.currentVideoFrame.CacheOption = BitmapCacheOption.OnLoad;
+                    //this.currentVideoFrame.StreamSource = this.frameMemoryStream;
+                    //this.currentVideoFrame.EndInit();
+                    //this.CurrentVideoFrame = this.currentVideoFrame;
+
+                    try
+                    {
+                        bi = new BitmapImage();
+                        bi.BeginInit();
+                        bi.CacheOption = BitmapCacheOption.OnLoad;
+                        bi.StreamSource = this.frameMemoryStream;
+                        bi.EndInit();
+                    }
+                    catch(Exception exc)
+                    {
+                        if (Debugger.IsAttached)
+                        {
+                            // Debugger.Break();
+                            Debug.WriteLine(exc.ToString());
+                            try
+                            {
+                                // File.Create("C:\\Temp\\" + Path.GetRandomFileName()).Write(frame.Payload, 0, frame.Payload.Length);
+                            }
+                            catch(Exception)
+                            {
+
+                            }
+                        }
+                       
+                    }
+                }
             }
         }
 
