@@ -1,5 +1,7 @@
-﻿using System;
+﻿using AMDev.CamServer.Client.Threading;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
@@ -19,6 +21,8 @@ namespace AMDev.CamServer.Client.Network
         #region Fields
 
         private TcpClient tcpClient = null;
+        private String host;
+        private int port;
 
         #endregion
 
@@ -30,8 +34,33 @@ namespace AMDev.CamServer.Client.Network
             protected set;
         }
 
-        public string Host { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public int Port { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public string Host
+        {
+            get
+            {                
+                return this.host;
+            }
+            set
+            {
+                if (this.Connected)
+                    throw new InvalidOperationException("The client is connected");
+                this.host = value;
+            }
+        }
+
+        public int Port
+        {
+            get
+            {
+                return this.port;
+            }
+            set
+            {
+                if (this.Connected)
+                    throw new InvalidOperationException("The client is connected");
+                this.port = value;
+            }
+        }
 
         #endregion
 
@@ -56,14 +85,18 @@ namespace AMDev.CamServer.Client.Network
                 {
                     await this.tcpClient.ConnectAsync(this.Host, this.Port);
                     this.Connected = true;
-                    Task.Run(new Action(this.ReadLoopTask));
+                    Task.Run(new Action(this.ReadLoopTask)).RunAndForget(); 
                 }
-                catch(SocketException)
+                catch(SocketException socktExc)
                 {
+                    if (Debugger.IsAttached)
+                        Debug.WriteLine(socktExc.ToString());
                     this.Connected = false;
                 }
-                catch(Exception)
+                catch(Exception exc)
                 {
+                    if (Debugger.IsAttached)
+                        Debug.WriteLine(exc.ToString());
                     this.Connected = false;
                 }
             }
@@ -94,7 +127,11 @@ namespace AMDev.CamServer.Client.Network
                             if (this.DataReceived != null)
                             {
                                 eventArgs = new DataReceivedEventArgs(buffer);
-                                this.DataReceived.BeginInvoke(this, eventArgs, this.DataReceivedAsyncCallback, null);
+                                Task.Run(() =>
+                                {
+                                    this.DataReceived.Invoke(this, eventArgs);
+                                });
+                                
                             }
                         }
                     }
@@ -104,16 +141,6 @@ namespace AMDev.CamServer.Client.Network
                     }
                 }
             }
-        }
-
-        #endregion
-
-        #region Events async callbacks
-
-        private void DataReceivedAsyncCallback(IAsyncResult ar)
-        {
-            if (this.DataReceived != null)
-                this.DataReceived.EndInvoke(ar);
         }
 
         #endregion

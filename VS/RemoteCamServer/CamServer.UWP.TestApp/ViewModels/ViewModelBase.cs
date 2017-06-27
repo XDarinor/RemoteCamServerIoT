@@ -1,4 +1,5 @@
-﻿using CamServer.UWP.TestApp.Common;
+﻿using AMDev.CamServer.UWP.Threading;
+using CamServer.UWP.TestApp.Common;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,7 +18,7 @@ namespace CamServer.UWP.TestApp.ViewModels
             CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
             {
                 action.Invoke();
-            });
+            }).AsTask().RunAndForget();
         }
     }
 }

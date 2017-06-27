@@ -4,9 +4,44 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Camserver.Client.TestApplication"
+        xmlns:viewmodels="clr-namespace:Camserver.Client.TestApplication.ViewModels"
         mc:Ignorable="d"
-        Title="MainWindow" Height="350" Width="525">
+        Title="NetworkCAM test application (WPF)" Height="768" Width="1024">
+    <Window.DataContext>
+        <viewmodels:MainWindowViewModel/>
+    </Window.DataContext>
     <Grid>
-        
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition />
+            <ColumnDefinition />
+        </Grid.ColumnDefinitions>
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition />
+            </Grid.RowDefinitions>
+            <TextBlock Text="Image received from network: " HorizontalAlignment="Center" VerticalAlignment="Center" Margin="10"
+                       FontWeight="Bold" Grid.Row="0"/>
+            <Image Grid.Row="1" Width="300" Height="300" 
+                   Margin="10" Source="{Binding CurrentVideoFrame, Mode=OneWay}" />
+        </Grid>
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition />
+            </Grid.RowDefinitions>            
+            <TextBlock Text="Commands" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="10"
+                       FontWeight="Bold" Grid.Row="0"/>
+            <StackPanel Grid.Row="1" HorizontalAlignment="Center">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Host: " Margin="10"/>
+                    <TextBox Width="120" Margin="10" Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Text="Port:" Margin="10" />
+                    <TextBox Width="60" Margin="10" Text="{Binding Port}" />
+                </StackPanel>
+                <Button Content="Connect" Margin="10" Command="{Binding ConnectCommand, Mode=OneWay}" />
+                <Button Content="Disconnect" Margin="10" Command="{Binding DisconnectCommand, Mode=OneWay}" />
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>

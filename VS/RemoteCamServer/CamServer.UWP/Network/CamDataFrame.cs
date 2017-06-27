@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AMDev.CamServer.UWP.Common;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -113,6 +114,7 @@ namespace AMDev.CamServer.UWP.Network
         {
             this.Payload = payload;
             this.PayloadType = PayloadType;
+            this.Timestamp = DateTime.Now.ToUnixTime();
         }
 
         #endregion

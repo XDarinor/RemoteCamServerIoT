@@ -1,4 +1,5 @@
 ﻿using AMDev.CamServer.UWP.Media;
+using AMDev.CamServer.UWP.Threading;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,9 +31,26 @@ namespace AMDev.CamServer.UWP.Network
             protected set;
         }
 
+        public String Host
+        {
+            get;
+            set;
+        }
+
+        public int Port
+        {
+            get;
+            set;
+        }
+
         #endregion
 
         #region .ctor
+
+        public CamStreamingServer()
+        {
+
+        }
 
         #endregion
 
@@ -47,6 +65,8 @@ namespace AMDev.CamServer.UWP.Network
                     case StreamingProtocols.Tcp:
                     default:
                         this.networkServer = new TcpServer();
+                        this.networkServer.Host = this.Host;
+                        this.networkServer.Port = this.Port;
                         this.networkServer.Listen();
                         break;
 
@@ -58,7 +78,7 @@ namespace AMDev.CamServer.UWP.Network
                 {
                     this.camCapture = new CamCapture();
                     this.camCapture.MediaCaptured += CamCapture_MediaCaptured;
-                    this.camCapture.Start();
+                    this.camCapture.Start().RunAndForget(); 
                 }
             }
         }

@@ -8,6 +8,7 @@ using Windows.Graphics.Imaging;
 using Windows.Media.Capture;
 using Windows.Media.MediaProperties;
 using Windows.Storage.Streams;
+using AMDev.CamServer.UWP.Threading;
 
 namespace AMDev.CamServer.UWP.Media
 {
@@ -69,7 +70,7 @@ namespace AMDev.CamServer.UWP.Media
                 if (this.lowLagPhotoCapture != null)
                 {
                     this.Capturing = true;
-                    Task.Run(this.CaptureTask);
+                    Task.Run(this.CaptureTask).RunAndForget();
                 }
             }
         }
@@ -123,7 +124,7 @@ namespace AMDev.CamServer.UWP.Media
                             Task.Run(() =>
                             {
                                 this.MediaCaptured(this, capturedEventsArgs);
-                            });
+                            }).RunAndForget(); 
                     }
                 }
                 await Task.Delay(CaptureWaitMillisecs);

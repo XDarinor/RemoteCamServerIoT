@@ -1,5 +1,6 @@
 ﻿using AMDev.CamServer.UWP.Media;
 using AMDev.CamServer.UWP.Network;
+using AMDev.CamServer.UWP.Threading;
 using CamServer.UWP.TestApp.Common;
 using System;
 using System.Collections.Generic;
@@ -20,9 +21,36 @@ namespace CamServer.UWP.TestApp.ViewModels
         private CamStreamingServer camServer = null;
         private BitmapSource previewSource = null;
 
+        private String host = null;
+        private int port = 5555;
+
         #endregion
 
         #region Properties
+
+        public String Host
+        {
+            get
+            {
+                return this.host;
+            }
+            set
+            {
+                this.SetProperty(ref this.host, value);
+            }
+        }
+
+        public int Port
+        {
+            get
+            {
+                return this.port;
+            }
+            set
+            {
+                this.SetProperty(ref this.port, value);
+            }
+        }
 
         public BitmapSource PreviewSource
         {
@@ -94,7 +122,11 @@ namespace CamServer.UWP.TestApp.ViewModels
         private void StartCapture(object parameter)
         {
             if (this.camServer != null)
+            {
+                this.camServer.Host = this.Host;
+                this.camServer.Port = this.Port;
                 this.camServer.StartStreaming(StreamingProtocols.Tcp);
+            }
         }
 
         private void StopCapture(object parameter)
@@ -110,7 +142,7 @@ namespace CamServer.UWP.TestApp.ViewModels
         {
             this.Dispatch(() =>
             {
-                this.UpdatePreview(e.Data);
+                this.UpdatePreview(e.Data).RunAndForget(); ;
             });
         }        
 

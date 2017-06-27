@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace AMDev.CamServer.UWP.Common
 {
-    public static class DateTimeHelperMethods
+    public static class DateTimeHelper
     {
         #region Methods
 

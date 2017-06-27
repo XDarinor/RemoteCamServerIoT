@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AMDev.CamServer.UWP.Threading;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -110,7 +111,7 @@ namespace AMDev.CamServer.UWP.Network
                 this.tcpListener = new TcpListener(currentEndPoint);
                 this.tcpListener.Start();                
                 this.Listening = true;
-                Task.Run(this.AcceptConnectionLooptask);
+                Task.Run(this.AcceptConnectionLooptask).RunAndForget(); 
             }
         }        
 
