@@ -14,6 +14,7 @@ namespace AMDev.CamServer.UWP.Network
        
         private INetworkServer networkServer = null;
         private CamCapture camCapture = null;
+        private uint seqNumber = 0;
 
         #endregion
 
@@ -124,6 +125,11 @@ namespace AMDev.CamServer.UWP.Network
                         break;
                 }
                 dataFrame = new CamDataFrame(e.Data, payloadType);
+                dataFrame.SequenceCounter = this.seqNumber;
+                if (this.seqNumber < uint.MaxValue)
+                    this.seqNumber++;
+                else
+                    this.seqNumber = 0;
                 frameBuffer = dataFrame.AsByteArray();
                 this.networkServer.Send(frameBuffer);
             }

@@ -88,7 +88,7 @@ namespace AMDev.CamServer.UWP.Network
             {
                 return this.sequenceCounter;
             }
-            protected set
+            set
             {
                 this.sequenceCounter = value;
             }
