@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
@@ -64,6 +65,14 @@ namespace AMDev.CamServer.Client.Network
 
         #endregion
 
+        #region .ctor
+
+        public TcpStreamClient()
+        {
+        }
+
+        #endregion
+
         #region Methods
 
         public void Close()
@@ -114,6 +123,7 @@ namespace AMDev.CamServer.Client.Network
                 NetworkStream ns = null;
                 DataReceivedEventArgs eventArgs = null;
                 byte[] buffer = null;
+                int readResult = 0;
 
                 if (this.tcpClient != null)
                 {
@@ -123,15 +133,14 @@ namespace AMDev.CamServer.Client.Network
                         {
                             buffer = new byte[this.tcpClient.Available];
                             ns = this.tcpClient.GetStream();
-                            ns.Read(buffer, 0, buffer.Length);
+                            readResult = ns.Read(buffer, 0, buffer.Length);
                             if (this.DataReceived != null)
                             {
                                 eventArgs = new DataReceivedEventArgs(buffer);
                                 Task.Run(() =>
                                 {
                                     this.DataReceived.Invoke(this, eventArgs);
-                                });
-                                
+                                });                                
                             }
                         }
                     }
@@ -141,7 +150,7 @@ namespace AMDev.CamServer.Client.Network
                     }
                 }
             }
-        }
+        }        
 
         #endregion
     }

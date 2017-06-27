@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,6 +19,7 @@ namespace AMDev.CamServer.Client.Network
         #region Fields
 
         private INetworkClient networkClient = null;
+        private MemoryStream bufferStream = null;
 
         #endregion
 
@@ -57,6 +59,8 @@ namespace AMDev.CamServer.Client.Network
 
             this.Host = host;
             this.Port = port;
+
+            this.bufferStream = new MemoryStream();
         }
 
         #endregion
@@ -87,7 +91,53 @@ namespace AMDev.CamServer.Client.Network
 
         public void Close()
         {
+            if (this.Connected && this.networkClient != null)
+            {
+                this.networkClient.Close();
+                this.networkClient = null;
+            }
+        }
 
+        private CamDataFrame GetFrame()
+        {
+            int tagLen = CamDataFrame.FrameTegLength;
+            int frameLen = 0;
+            long currentPosition = 0;
+            long cutPosition = 0;
+            byte[] tagBuffer = null;
+            byte[] frameBuffer = null;
+            byte[] buffer = null;
+            String tag = null;
+            BinaryReader br = null;
+            CamDataFrame dataFrame = null;
+
+            if (this.bufferStream.Length > 0)
+            {
+                this.bufferStream.Seek(0, SeekOrigin.Begin);
+                currentPosition = this.bufferStream.Position;
+                br = new BinaryReader(this.bufferStream);
+                while (currentPosition < this.bufferStream.Length)
+                {
+                    tagBuffer = new byte[tagLen];
+                    this.bufferStream.Read(tagBuffer, 0, tagLen);
+                    tag = Encoding.ASCII.GetString(tagBuffer);
+                    if (tag == CamDataFrame.FrameTag)
+                    {
+                        frameLen = br.ReadInt32();
+                        this.bufferStream.Seek(currentPosition, SeekOrigin.Begin);
+                        frameBuffer =  br.ReadBytes(frameLen);
+                        cutPosition = this.bufferStream.Position;
+                        dataFrame = CamDataFrame.FromByteArray(frameBuffer);
+                        buffer = this.bufferStream.GetBuffer();
+                        this.bufferStream.Seek(0, SeekOrigin.Begin);
+                        this.bufferStream.Write(buffer, (int) cutPosition, (buffer.Length - (int)cutPosition));
+                        break;
+                    }
+                    currentPosition = this.bufferStream.Position;
+                }                
+            }
+
+            return dataFrame;
         }
 
         #endregion
@@ -101,9 +151,12 @@ namespace AMDev.CamServer.Client.Network
 
             if (e.Buffer != null)
             {
+                this.bufferStream.Seek(0, SeekOrigin.End);
+                this.bufferStream.Write(e.Buffer, 0, e.Buffer.Length);
+
                 try
                 {
-                    camDataFrame = CamDataFrame.FromByteArray(e.Buffer);
+                    camDataFrame = this.GetFrame();
                     if (camDataFrame != null && this.FrameReceived != null)
                     {
                         frameReceivedEventArgs = new FrameReceivedEventArgs(camDataFrame);

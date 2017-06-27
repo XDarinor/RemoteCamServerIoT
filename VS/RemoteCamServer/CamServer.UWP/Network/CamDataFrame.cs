@@ -13,8 +13,9 @@ namespace AMDev.CamServer.UWP.Network
     {
         #region Consts      
 
+        public const String FrameTag = "CAMDATAFRAME";       // Size 12 ASCII
         protected const byte VersionBytes = 0x01;
-        protected const int CamHeaderSize = 22;
+        protected const int CamHeaderSize = 34;
 
         #endregion
 
@@ -31,7 +32,20 @@ namespace AMDev.CamServer.UWP.Network
 
         #region Properties
 
-        public long Length
+        public static int FrameTegLength
+        {
+            get
+            {
+                int result = 0;
+                byte[] tagBytes = null;
+
+                tagBytes = Encoding.ASCII.GetBytes(FrameTag);
+                result = tagBytes.Length;
+                return result;
+            }
+        }
+
+        public int Length
         {
             get
             {
@@ -129,11 +143,37 @@ namespace AMDev.CamServer.UWP.Network
         #endregion
 
         #region Methods       
+
+        public static long GetFrameLength(byte[] buffer)
+        {
+            MemoryStream ms = null;
+            BinaryReader br = null;
+            int frameLen = 0;
+
+            if (buffer == null)
+                throw new ArgumentNullException(nameof(buffer));
+
+            if (buffer.Length < CamHeaderSize)
+                throw new FormatException("Frame size too small");
+
+            ms = new MemoryStream(buffer);
+            br = new BinaryReader(ms);
+
+            frameLen = br.ReadInt32();
+
+            br.Dispose();
+            ms.Dispose();
+
+            return frameLen;
+        }
+
         public static CamDataFrame FromByteArray(byte[] buffer)
         {
             MemoryStream ms = null;
             BinaryReader br = null;
             CamDataFrame currentDataFrame = null;
+            byte[] tagBytes = null;
+            int frameLen = 0;
             int payloadLen = 0;
 
             if (buffer == null)
@@ -146,6 +186,9 @@ namespace AMDev.CamServer.UWP.Network
             br = new BinaryReader(ms);
 
             currentDataFrame = new CamDataFrame();
+            tagBytes = Encoding.ASCII.GetBytes(FrameTag);
+            tagBytes = br.ReadBytes(tagBytes.Length);
+            frameLen = br.ReadInt32();
             currentDataFrame.Version = br.ReadByte();
             currentDataFrame.PayloadType = br.ReadByte();
             currentDataFrame.SequenceCounter = br.ReadUInt32();
@@ -161,7 +204,10 @@ namespace AMDev.CamServer.UWP.Network
             MemoryStream ms = new MemoryStream();
             BinaryWriter binaryWriter = new BinaryWriter(ms);
             byte[] result = null;
+            byte[] tagBytes = null;
 
+            tagBytes = Encoding.ASCII.GetBytes(FrameTag);
+            binaryWriter.Write(tagBytes);
             binaryWriter.Write(this.Length);
             binaryWriter.Write(this.Version);
             binaryWriter.Write(this.PayloadType);

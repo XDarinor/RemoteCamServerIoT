@@ -165,7 +165,7 @@ namespace Camserver.Client.TestApplication.ViewModels
 
         private void SetCurrentImageStream(CamDataFrame frame)
         {            
-            if (frame != null  && this.CurrentVideoFrame != null)
+            if (frame != null  && frame.Payload != null && this.CurrentVideoFrame != null)
             {
                 this.frameMemoryStream.SetLength(0);
                 this.frameMemoryStream.Write(frame.Payload, 0, frame.Payload.Length);
